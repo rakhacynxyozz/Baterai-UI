@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Status Baterai</title>
+<style>
+:root {
+    --bg: #ffffff;
+    --fg: #0f172a;
+    --muted: #64748b;
+    --card: #f1f5f9;
+    --shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+}
+html[data-theme="dark"] {
+    --bg: #0b1220;
+    --fg: #e2e8f0;
+    --muted: #94a3b8;
+    --card: #111827;
+    --shadow: 0 10px 30px rgba(2, 6, 23, 0.6);
+}
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    display: grid;
+    place-items: center;
+    min-height: 100vh;
+    transition: background 240ms ease, color 240ms ease;
+}
+.app {
+    width: min(720px, 92vw);
+    background: var(--card);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+    display: grid;
+    gap: 20px;
+}
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.group {
+    display: inline-flex;
+    gap: 8px;
+}
+.toggle {
+    display: inline-flex;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: var(--bg);
+    box-shadow: inset 0 0 0 1px rgba(100,116,139,.25);
+}
+button {
+    border: none;
+    background: transparent;
+    color: var(--fg);
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+}
+button[aria-pressed="true"] {
+    background: rgba(100,116,139,.18);
+}
+.battery-wrap {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    padding: 16px;
+}
+.percent {
+    font-size: clamp(28px,6vw,42px);
+    font-weight: 800;
+}
+.label {
+    color: var(--muted);
+    font-size: 14px;
+}
+.battery {
+    width: min(420px,80vw);
+    filter: drop-shadow(0 6px 18px rgba(2,6,23,.25));
+}
+footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+}
+.flag {font-size:18px;}
+.icon {width:20px;height:20px;}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+    <div class="group">
+        <button id="lang-id" aria-pressed="true"><span class="flag">🇮🇩</span> IDN</button>
+        <button id="lang-en" aria-pressed="false"><span class="flag">🇺🇸</span> ENG</button>
+    </div>
+    <div class="group">
+        <div class="toggle">
+            <button id="theme-dark" aria-pressed="false">
+                🌙 <span id="label-dark">Hitam</span>
+            </button>
+            <button id="theme-light" aria-pressed="true">
+                ☀️ <span id="label-light">Putih</span>
+            </button>
+        </div>
+    </div>
+</header>
+<section class="battery-wrap">
+    <svg class="battery" viewBox="0 0 240 120">
+        <rect x="6" y="24" rx="14" ry="14" width="208" height="72" fill="none" stroke="currentColor" stroke-width="6"/>
+        <rect x="214" y="44" rx="6" ry="6" width="20" height="32" fill="currentColor"/>
+        <rect x="18" y="36" width="184" height="48" rx="8" ry="8" fill="rgba(100,116,139,0.18)"/>
+        <clipPath id="clip-inner"><rect x="18" y="36" width="184" height="48" rx="8"/></clipPath>
+        <rect id="fill" x="18" y="36" width="0" height="48" clip-path="url(#clip-inner)" fill="#ef4444"/>
+    </svg>
+    <div class="percent" id="percent">0%</div>
+    <div class="label" id="hint">Baterai perangkat Anda</div>
+</section>
+<footer id="copyright">© Rakha dilindungi undang-undang</footer>
+</div>
+
+<script>
+(function(){
+    const html=document.documentElement;
+    const percentEl=document.getElementById('percent');
+    const fillEl=document.getElementById('fill');
+    const hintEl=document.getElementById('hint');
+    const footerEl=document.getElementById('copyright');
+    const labelDark=document.getElementById('label-dark');
+    const labelLight=document.getElementById('label-light');
+
+    const btnID=document.getElementById('lang-id');
+    const btnEN=document.getElementById('lang-en');
+    const btnDark=document.getElementById('theme-dark');
+    const btnLight=document.getElementById('theme-light');
+
+    let lang='id';
+    let batteryPercent=0;
+    let charging=false;
+
+    function colorFor(p){
+        if(p<=15)return'#ef4444';
+        if(p<=30)return'#f97316';
+        if(p<=50)return'#f59e0b';
+        if(p<=75)return'#22c55e';
+        return'#39FF14';
+    }
+
+    function render(){
+        const clamped=Math.max(0,Math.min(100,batteryPercent));
+        const w=(clamped/100)*184;
+        fillEl.setAttribute('width',w);
+        fillEl.setAttribute('fill',colorFor(clamped));
+        percentEl.textContent=clamped.toFixed(0)+'%';
+        if(lang==='id'){
+            hintEl.textContent='Baterai perangkat Anda'+(charging?' (Mengisi daya)':'');
+        }else{
+            hintEl.textContent='Your device battery'+(charging?' (Charging)':'');
+        }
+        requestAnimationFrame(render);
+    }
+
+    function setTheme(t){
+        const isDark=t==='dark';
+        html.setAttribute('data-theme',isDark?'dark':'light');
+        btnDark.setAttribute('aria-pressed',isDark);
+        btnLight.setAttribute('aria-pressed',!isDark);
+        localStorage.setItem('theme',t);
+    }
+
+    function setLang(l){
+        lang=l;
+        const isID=l==='id';
+        btnID.setAttribute('aria-pressed',isID);
+        btnEN.setAttribute('aria-pressed',!isID);
+        if(isID){
+            labelDark.textContent='Hitam';
+            labelLight.textContent='Putih';
+            footerEl.textContent='© Rakha dilindungi undang-undang';
+        }else{
+            labelDark.textContent='Black';
+            labelLight.textContent='White';
+            footerEl.textContent='© Rakha – all rights reserved';
+        }
+        localStorage.setItem('lang',l);
+    }
+
+    btnDark.addEventListener('click',()=>setTheme('dark'));
+    btnLight.addEventListener('click',()=>setTheme('light'));
+    btnID.addEventListener('click',()=>setLang('id'));
+    btnEN.addEventListener('click',()=>setLang('en'));
+
+    if(navigator.getBattery){
+        navigator.getBattery().then(b=>{
+            function update(){
+                batteryPercent=(b.level||0)*100;
+                charging=b.charging;
+            }
+            update();
+            b.addEventListener('levelchange',update);
+            b.addEventListener('chargingchange',update);
+        });
+    }else{
+        setInterval(()=>{
+            batteryPercent+=0.1;
+            if(batteryPercent>100)batteryPercent=0;
+        },100);
+    }
+
+    const savedTheme=localStorage.getItem('theme');
+    const savedLang=localStorage.getItem('lang');
+    if(savedTheme)setTheme(savedTheme);
+    if(savedLang)setLang(savedLang);
+
+    render();
+})();
+</script>
+</body>
+</html>
